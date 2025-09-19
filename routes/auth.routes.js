@@ -5,53 +5,41 @@ import authMiddleware from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-// Memória para armazenar usuários (só para exemplo)
+// "Banco de dados" em memória
 const users = [];
 
-// Rota registro
+// Registro
 router.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
-  // Verifica se usuário já existe
-  const userExist = users.find((u) => u.username === username);
+  const userExist = users.find(u => u.username === username);
   if (userExist) {
     return res.status(400).json({ message: "Usuário já existe" });
   }
 
-  // Criptografa a senha
   const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Salva o usuário
   users.push({ username, password: hashedPassword });
 
   res.json({ message: "Usuário registrado com sucesso" });
 });
 
-// Rota login
+// Login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
-  // Busca usuário
-  const user = users.find((u) => u.username === username);
-  if (!user) {
-    return res.status(400).json({ message: "Usuário não encontrado" });
-  }
+  const user = users.find(u => u.username === username);
+  if (!user) return res.status(400).json({ message: "Usuário não encontrado" });
 
-  // Verifica senha
   const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: "Senha inválida" });
-  }
+  if (!isPasswordValid) return res.status(400).json({ message: "Senha inválida" });
 
-  // Gera token JWT
-  const token = jwt.sign({ username }, "secreta123", { expiresIn: "1h" });
-
+  const token = jwt.sign({ username }, process.env.JWT_SECRET || "secreta123", { expiresIn: "1h" });
   res.json({ token });
 });
 
-//Rota protegida
+// Rota protegida
 router.get("/profile", authMiddleware, (req, res) => {
-    res.json({message: `Bem vindo ${req.user.username}`})
-  });
+  res.json({ message: `Bem-vindo, ${req.user.username}` });
+});
 
 export default router;
